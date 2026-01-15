@@ -2,17 +2,15 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import { useAuth } from "../context/AuthContext";
 
 export default function Auth() {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [mode, setMode] = useState("login");
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [error, setError] = useState("");
-
-  // 🔐 Admin Credentials
-  const ADMIN_EMAIL = "SanthoshMobilesHub@2026";
-  const ADMIN_PASS = "SMH@2026";
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -22,21 +20,20 @@ export default function Auth() {
     e.preventDefault();
     setError("");
 
-    // ===== ADMIN LOGIN CHECK =====
-    if (form.email === ADMIN_EMAIL && form.password === ADMIN_PASS) {
-      localStorage.setItem("isAdmin", "true");
-      navigate("/admin");
-      return;
-    }
-
-    // ===== CUSTOMER LOGIN (DEMO) =====
     if (mode === "login") {
-      if (!form.email || !form.password) {
-        setError("Please enter valid login details.");
+      // Attempt admin login using the password.
+      // The login function from context handles the secure check.
+      if (login(form.password)) {
+        navigate("/admin");
         return;
       }
 
-      localStorage.setItem("isAdmin", "false");
+      // ===== CUSTOMER LOGIN (DEMO) =====
+      if (!form.email || !form.password) {
+        setError("Invalid credentials. Please try again.");
+        return;
+      }
+      // If password was not the admin pass, treat as customer
       alert(`Customer Logged in successfully!`);
       navigate("/");
     }

@@ -1,55 +1,41 @@
-// Simple API helper to call Google Apps Script web app
-export const WEB_APP_URL ="https://script.google.com/macros/s/AKfycbzkrLj5kD6dX5on-oQ_2aMPJYfx3rnRZktGhdzLnwRbkYLAr6JzbBm9JQZ2sTB9uU0_Mw/exec"
-
+export const WEB_APP_URL =
+  "https://script.google.com/macros/s/AKfycbznDdZ59fSqQecC1QZQauoo2Xntebc6gJrhygNOLlb5XSXjPMG6XYTky07adIUSATYuxg/exec"
 export async function saveCheckoutDraft(draft) {
-  if (!WEB_APP_URL) return null
   try {
-    const form = new URLSearchParams()
-    form.append('action', 'draft')
-    form.append('data', JSON.stringify(draft))
-
     const res = await fetch(WEB_APP_URL, {
-      method: 'POST',
-      body: form
-      // ❌ NO headers here
-    })
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        action: "draft",
+        data: draft
+      })
+    });
 
-    const text = await res.text()
-    try {
-      return JSON.parse(text)
-    } catch {
-      return { success: res.ok }
-    }
+    return await res.json();
   } catch (err) {
-    console.warn('draft save failed', err)
-    return null
+    console.error("Draft save ERROR:", err);
+    return { success: false, error: err.message };
   }
 }
 
 export async function submitOrder(payload) {
-  if (!WEB_APP_URL) throw new Error('WEB_APP_URL not set')
-
   try {
-    const form = new URLSearchParams()
-    form.append('action', 'order')
-    form.append('data', JSON.stringify(payload))
-
     const res = await fetch(WEB_APP_URL, {
-      method: 'POST',
-      body: form
-      // ❌ NO headers here
-    })
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        action: "order",
+        data: payload
+      })
+    });
 
-    const text = await res.text()
-    try {
-      return JSON.parse(text)
-    } catch {
-      throw new Error(
-        `Unexpected server response: ${res.status} ${res.statusText} - ${text}`
-      )
-    }
+    return await res.json();
   } catch (err) {
-    console.error('submitOrder failed', err)
-    throw err
+    console.error("Submit order ERROR:", err);
+    return { success: false, error: err.message };
   }
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import products from "../data/products.json";
 import {
@@ -11,8 +11,13 @@ import {
   FiMenu,
 } from "react-icons/fi";
 import { AiOutlineWhatsApp } from "react-icons/ai";
-import { useCart } from '../context/CartContext'
-import { useWishlist } from '../context/WishlistContext'
+import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
+import { useAuth } from '../context/AuthContext'; // Import useAuth
+import { useTheme } from '../context/ThemeContext'; // Import useTheme
+import { FiSun, FiMoon } from 'react-icons/fi';
+import WishlistDropdown from './WishlistDropdown'; // Import WishlistDropdown
+import CartDropdown from './CartDropdown'; // Import CartDropdown
 
 const CATEGORIES = [
   "Home",
@@ -30,54 +35,46 @@ const CATEGORIES = [
 
 export default function Navbar() {
   const navigate = useNavigate();
+  const { isAuthenticated, login, logout } = useAuth(); // Use the auth context
+  const { theme, toggleTheme } = useTheme();
 
   const [search, setSearch] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  const { cart, addToCart: ctxAddToCart, removeFromCart: ctxRemoveFromCart } = useCart()
-  const { items: wishlist, remove: ctxRemoveFromWishlist, toggle: ctxToggleWishlist } = useWishlist()
+  const { cart, addToCart: ctxAddToCart, removeFromCart: ctxRemoveFromCart } = useCart();
+  const { items: wishlist, remove: ctxRemoveFromWishlist, toggle: ctxToggleWishlist } = useWishlist();
 
-  const [showUserModal, setShowUserModal] = useState(false);
+  const [showAdminLoginModal, setShowAdminLoginModal] = useState(false); // Renamed for clarity
   const [showWishlistDropdown, setShowWishlistDropdown] = useState(false);
   const [showCartDropdown, setShowCartDropdown] = useState(false);
 
-  const [adminEmail, setAdminEmail] = useState("");
-  const [adminPassword, setAdminPassword] = useState("");
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [password, setPassword] = useState(""); // Only need password for admin login in modal
+  const [adminModalError, setAdminModalError] = useState("");
 
   const searchRef = useRef(null);
   const suggestionsRef = useRef(null);
 
-  // -----------------------------
-  // Check admin login state
-  // -----------------------------
-  useEffect(() => {
-    const adminFlag = localStorage.getItem("isAdmin") === "true";
-    setIsAdmin(adminFlag);
-  }, []);
-
-  function handleAdminLogin() {
-    if (adminEmail === "SanthoshMobilesHub@2026" && adminPassword === "SMH@2026") {
-      localStorage.setItem("isAdmin", "true");
-      setIsAdmin(true);
-      setShowUserModal(false);
+  function handleAdminLoginAttempt() {
+    setAdminModalError("");
+    if (login(password)) { // Use the login function from AuthContext
+      setShowAdminLoginModal(false);
+      setPassword(""); // Clear password
       navigate("/admin");
     } else {
-      alert("Invalid User ID or Password");
+      setAdminModalError("Invalid Admin Password");
     }
   }
 
   function handleAdminLogout() {
-    localStorage.removeItem("isAdmin");
-    setIsAdmin(false);
+    logout(); // Use the logout function from AuthContext
     navigate("/");
   }
 
   // -----------------------------
   // Search Logic
   // -----------------------------
-  useEffect(() => {
+  React.useEffect(() => { // Changed to React.useEffect for clarity but not strictly necessary
     if (!search.trim()) {
       setSuggestions([]);
       return;
@@ -89,7 +86,7 @@ export default function Navbar() {
     setSuggestions(matched.slice(0, 8));
   }, [search]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     function onDoc(e) {
       if (
         searchRef.current &&
@@ -128,23 +125,26 @@ export default function Navbar() {
   }
 
   return (
-    <header className="w-full">
-      <div className="w-full bg-white shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-4">
+    <header className="w-full sticky top-0 z-50 transition-all duration-300">
+      {/* MAIN NAV - GLASS EFFECT */}
+      <div className="w-full glass-nav shadow-lg">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-6">
 
           {/* LOGO */}
           <div className="flex items-center gap-3 min-w-[220px]">
-            <Link to="/" className="flex items-center gap-3">
-              <img src="/images/Favicon/SMLogo.png" alt="SM" className="w-10 h-10 object-contain" />
-              <div className="text-lg font-semibold">Santhosh Mobiles</div>
+            <Link to="/" className="flex items-center gap-3 group">
+              <img src="/images/Favicon/SMLogo.png" alt="SM" className="w-10 h-10 object-contain drop-shadow-lg group-hover:scale-105 transition-transform" />
+              <div className="text-xl font-heading font-bold text-slate-900 dark:text-gray-100 tracking-wide">
+                Santhosh <span className="text-gradient-gold">Mobiles</span>
+              </div>
             </Link>
           </div>
 
           {/* SEARCH */}
-          <div className="flex-1 relative" ref={searchRef}>
-            <form onSubmit={onSubmitSearch} className="relative">
-              <div className="flex items-center border rounded overflow-hidden">
-                <span className="px-3 text-gray-400"><FiSearch /></span>
+          <div className="flex-1 relative max-w-xl mx-auto" ref={searchRef}>
+            <form onSubmit={onSubmitSearch} className="relative group">
+              <div className="flex items-center bg-gray-100 dark:bg-primary-light/50 border border-gray-200 dark:border-gray-700/50 rounded-full overflow-hidden focus-within:border-accent/50 focus-within:ring-1 focus-within:ring-accent/30 transition-all">
+                <span className="pl-4 text-gray-400 group-focus-within:text-accent"><FiSearch size={18} /></span>
                 <input
                   value={search}
                   onChange={(e) => {
@@ -152,44 +152,45 @@ export default function Navbar() {
                     setShowSuggestions(true);
                   }}
                   onFocus={() => setShowSuggestions(true)}
-                  placeholder="Search products"
-                  className="w-full px-3 py-2 outline-none"
+                  placeholder="Search for premium devices..."
+                  className="w-full px-4 py-2 bg-transparent text-slate-900 dark:text-gray-200 placeholder-gray-500 outline-none"
                 />
                 {search && (
-                  <button type="button" onClick={() => setSearch("")} className="px-3 text-gray-500">
+                  <button type="button" onClick={() => setSearch("")} className="pr-4 text-gray-400 hover:text-slate-900 dark:hover:text-white">
                     <FiX />
                   </button>
                 )}
               </div>
             </form>
 
+            {/* SEARCH SUGGESTIONS */}
             {showSuggestions && (
-              <div ref={suggestionsRef} className="absolute left-0 right-0 mt-2 bg-white border rounded shadow z-50 max-h-72 overflow-auto">
+              <div ref={suggestionsRef} className="absolute left-0 right-0 mt-2 bg-white dark:bg-primary-light border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl z-50 max-h-80 overflow-auto backdrop-blur-xl">
                 {suggestions.length > 0 ? (
                   suggestions.map((p) => (
                     <button
                       key={p.id}
                       onClick={() => { goToProduct(p.id); setShowSuggestions(false); }}
-                      className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3"
+                      className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-primary/50 flex items-center gap-4 border-b border-gray-200 dark:border-gray-800 last:border-none transition-colors"
                     >
-                      <img src={p.image} alt={p.title} className="w-12 h-12 object-contain" />
+                      <img src={p.image} alt={p.title} className="w-12 h-12 object-contain bg-white rounded-md p-1 border border-gray-100" />
                       <div className="flex-1">
-                        <div className="text-sm font-medium truncate">{p.title}</div>
-                        <div className="text-xs text-gray-500">{p.brand} — {p.category}</div>
+                        <div className="text-sm font-medium text-slate-900 dark:text-gray-200 truncate">{p.title}</div>
+                        <div className="text-xs text-gray-500 uppercase tracking-wider">{p.brand} • {p.category}</div>
                       </div>
-                      <div className="text-sm font-bold">₹{p.price}</div>
+                      <div className="text-sm font-bold text-accent">₹{p.price}</div>
                     </button>
                   ))
                 ) : (
-                  <div className="p-4 text-center">
-                    <div className="text-sm text-gray-600 mb-2">Product not available</div>
+                  <div className="p-6 text-center">
+                    <div className="text-sm text-gray-400 mb-3">Product not found in our collection</div>
                     <a
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded"
+                      className="inline-flex items-center gap-2 px-5 py-2 btn-primary text-sm"
                       href={`https://wa.me/919790225832?text=${encodeURIComponent(`Hi, I'm looking for: ${search}`)}`}
                       target="_blank"
                       rel="noreferrer"
                     >
-                      <AiOutlineWhatsApp /> Raise request via WhatsApp
+                      <AiOutlineWhatsApp size={18} /> Request via WhatsApp
                     </a>
                   </div>
                 )}
@@ -198,25 +199,40 @@ export default function Navbar() {
           </div>
 
           {/* RIGHT SECTION */}
-          <div className="flex items-center gap-4 min-w-[220px] justify-end">
+          <div className="flex items-center gap-5 min-w-[220px] justify-end">
 
-            {/* ADMIN OR USER ICON */}
-            {!isAdmin ? (
-              <button onClick={() => setShowUserModal(true)} className="p-2 hover:bg-gray-100 rounded">
-                <FiUser size={18} />
-              </button>
+
+            {/* THEME TOGGLE */}
+            <button
+              onClick={toggleTheme}
+              className="p-2 text-gray-600 dark:text-gray-300 hover:text-accent dark:hover:text-accent hover:bg-gray-100 dark:hover:bg-white/5 rounded-full transition-colors"
+              title="Toggle Theme"
+            >
+              {theme === 'dark' ? <FiSun size={20} /> : <FiMoon size={20} />}
+            </button>
+
+            {/* ADMIN */}
+            {isAuthenticated ? (
+              <div className="flex items-center gap-3">
+                <Link to="/admin" className="p-2 text-gray-600 dark:text-gray-300 hover:text-accent dark:hover:text-accent hover:bg-gray-100 dark:hover:bg-white/5 rounded-full transition-colors" title="Admin Dashboard">
+                  <FiUser size={20} />
+                </Link>
+                <button onClick={handleAdminLogout} className="text-sm font-medium text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition-colors">
+                  Logout
+                </button>
+              </div>
             ) : (
-              <button onClick={handleAdminLogout} className="bg-red-600 text-white px-3 py-2 rounded">
-                Logout Admin
+              <button onClick={() => setShowAdminLoginModal(true)} className="p-2 text-gray-600 dark:text-gray-300 hover:text-accent dark:hover:text-accent hover:bg-gray-100 dark:hover:bg-white/5 rounded-full transition-colors" title="Admin Login">
+                <FiUser size={20} />
               </button>
             )}
 
             {/* WISHLIST */}
             <div className="relative nav-wishlist">
-              <button onClick={() => setShowWishlistDropdown((s) => !s)} className="p-2 hover:bg-gray-100 rounded">
-                <FiHeart size={18} />
+              <button onClick={() => setShowWishlistDropdown((s) => !s)} className="p-2 text-gray-600 dark:text-gray-300 hover:text-accent dark:hover:text-accent hover:bg-gray-100 dark:hover:bg-white/5 rounded-full transition-colors">
+                <FiHeart size={20} />
                 {wishlist.length > 0 && (
-                  <span className="absolute -top-1 -right-1 text-xs bg-red-600 text-white px-1 rounded">
+                  <span className="absolute -top-0 -right-0 text-[10px] w-4 h-4 flex items-center justify-center bg-accent text-primary-dark font-bold rounded-full animate-pulse">
                     {wishlist.length}
                   </span>
                 )}
@@ -225,10 +241,10 @@ export default function Navbar() {
 
             {/* CART */}
             <div className="relative nav-cart">
-              <button onClick={() => setShowCartDropdown((s) => !s)} className="p-2 hover:bg-gray-100 rounded">
-                <FiShoppingCart size={18} />
+              <button onClick={() => setShowCartDropdown((s) => !s)} className="p-2 text-gray-600 dark:text-gray-300 hover:text-accent dark:hover:text-accent hover:bg-gray-100 dark:hover:bg-white/5 rounded-full transition-colors">
+                <FiShoppingCart size={20} />
                 {cart.length > 0 && (
-                  <span className="absolute -top-1 -right-1 text-xs bg-red-600 text-white px-1 rounded">
+                  <span className="absolute -top-0 -right-0 text-[10px] w-4 h-4 flex items-center justify-center bg-accent text-primary-dark font-bold rounded-full animate-pulse">
                     {cart.length}
                   </span>
                 )}
@@ -238,15 +254,18 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* NAV CATEGORIES */}
-      <nav className="w-full sticky top-[64px] z-40 bg-white border-t border-b">
-        <div className="max-w-6xl mx-auto px-4">
-          <ul className="flex flex-wrap justify-center gap-6 py-2 text-sm">
+      {/* NAV CATEGORIES - SECONDARY BAR */}
+      <nav className="w-full bg-gray-50 dark:bg-primary-dark/95 border-b border-gray-200 dark:border-gray-800 backdrop-blur-sm transition-colors duration-300">
+        <div className="max-w-7xl mx-auto px-4">
+          <ul className="flex flex-wrap justify-center gap-x-8 gap-y-2 py-3 text-sm font-medium">
             {CATEGORIES.map((c) => {
               const to = c === "Home" ? "/" : c === "All Products" ? "/shop" : `/shop?category=${encodeURIComponent(c)}`;
               return (
-                <li key={c} className="hover:text-indigo-600 hover:underline">
-                  <Link to={to}>{c}</Link>
+                <li key={c}>
+                  <Link to={to} className="text-gray-600 dark:text-gray-400 hover:text-accent dark:hover:text-accent transition-colors relative group">
+                    {c}
+                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-accent transition-all duration-300 group-hover:w-full"></span>
+                  </Link>
                 </li>
               );
             })}
@@ -254,54 +273,68 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* LOGIN / SIGNUP MODAL */}
-      {showUserModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white w-full max-w-md rounded p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold">Admin Login</h3>
-              <button onClick={() => setShowUserModal(false)} className="text-gray-500">
-                <FiX />
+      {/* ADMIN LOGIN MODAL */}
+      {showAdminLoginModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-primary-light w-full max-w-md rounded-2xl p-8 border border-gray-700 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-accent/0 via-accent to-accent/0"></div>
+
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-heading font-bold text-white">Admin Access</h3>
+              <button onClick={() => setShowAdminLoginModal(false)} className="text-gray-400 hover:text-white transition-colors">
+                <FiX size={24} />
               </button>
             </div>
 
-            <div className="space-y-3">
-              <input
-                className="w-full border px-3 py-2 rounded"
-                placeholder="Admin Email"
-                value={adminEmail}
-                onChange={(e) => setAdminEmail(e.target.value)}
-              />
-              <input
-                className="w-full border px-3 py-2 rounded"
-                placeholder="Password"
-                type="password"
-                value={adminPassword}
-                onChange={(e) => setAdminPassword(e.target.value)}
-              />
-
-              <div className="flex gap-2">
-                <button
-                  onClick={handleAdminLogin}
-                  className="flex-1 bg-indigo-600 text-white px-3 py-2 rounded"
-                >
-                  Login
-                </button>
-                <button
-                  onClick={() => alert("Customer signup is not implemented yet")}
-                  className="flex-1 border px-3 py-2 rounded"
-                >
-                  Sign Up
-                </button>
+            <div className="space-y-5">
+              <div>
+                <label className="block text-gray-400 text-sm mb-2">Security Key</label>
+                <input
+                  className="w-full bg-primary-dark border border-gray-700 focus:border-accent text-white px-4 py-3 rounded-xl outline-none transition-all placeholder-gray-600"
+                  placeholder="Enter Passkey"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAdminLoginAttempt()}
+                />
               </div>
 
-              <div className="text-xs text-gray-500">
-                Only authorized admin can login here.
+              {adminModalError && (
+                <div className="text-red-400 text-sm bg-red-400/10 px-3 py-2 rounded-lg border border-red-400/20">
+                  {adminModalError}
+                </div>
+              )}
+
+              <button
+                onClick={handleAdminLoginAttempt}
+                className="w-full btn-primary py-3 rounded-xl"
+              >
+                Authenticate
+              </button>
+
+              <div className="text-center text-xs text-gray-500 mt-4">
+                Authorized personnel only. All attempts are logged.
               </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* DROPDOWNS */}
+      <WishlistDropdown
+        isOpen={showWishlistDropdown}
+        onClose={() => setShowWishlistDropdown(false)}
+        items={wishlist}
+        onRemoveItem={ctxRemoveFromWishlist}
+      />
+
+      <CartDropdown
+        isOpen={showCartDropdown}
+        onClose={() => setShowCartDropdown(false)}
+        items={cart}
+        onRemoveItem={ctxRemoveFromCart}
+        onProceedToPay={proceedToPay}
+      />
     </header>
   );
 }

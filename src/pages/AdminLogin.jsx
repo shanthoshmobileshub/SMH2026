@@ -20,7 +20,7 @@ export default function AdminLogin({ onLogin }) {
 
   return (
     <div style={{ maxWidth: 400, margin: "60px auto" }}>
-      <h2>Admin Login</h2>
+      <h2>Welcome Back!</h2>
 
       <form onSubmit={handleLogin}>
         <input

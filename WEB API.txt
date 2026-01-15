@@ -15,3 +15,9 @@ https://drive.google.com/drive/folders/1GzuGSV3HhT8MjcejfnOcXMem9y4se4Xh?usp=sha
 
 Sheets:
 https://docs.google.com/spreadsheets/d/1F8kWXs7HjH6_bBBJG84cApHVUko7fFQcT2_S9QU6ork/edit?usp=sharing
+
+
+1️⃣    Full AdminDashboard.jsx (table + image + status dropdown)
+2️⃣    Live refresh without reload
+3️⃣    WhatsApp notification on Approve/Reject
+4️⃣    Admin logout + session persistence
